@@ -1,0 +1,939 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Learn Castilian Spanish (A0–A2) with Arabic support, interactive lessons, games, and cultural notes.">
+    <title>Learn Spanish with Youssef</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #58cc02;
+            --accent: #ff4b4b;
+            --bg: #f7fafc;
+            --card-bg: #ffffff;
+            --text: #1a202c;
+            --gray: #a0aec0;
+        }
+        [data-language="es"] { --primary: #C60B1E; --accent: #FFC107; }
+        [data-language="en"] { --primary: #1E3A8A; --accent: #B22234; }
+        [data-language="ar"] { --primary: #007A33; --accent: #CE1126; }
+        .dark {
+            --bg: #2d3748;
+            --card-bg: #4a5568;
+            --text: #e2e8f0;
+            --gray: #cbd5e0;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            transition: all 0.3s ease;
+        }
+        .arabic {
+            font-family: 'Amiri', serif;
+            direction: rtl;
+            text-align: right;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 9999px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .btn-secondary {
+            background: var(--accent);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 9999px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+        }
+        nav {
+            background: var(--card-bg);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        nav a {
+            color: var(--text);
+            padding: 8px 16px;
+            border-radius: 9999px;
+            transition: background 0.3s;
+        }
+        nav a:hover, nav a.active {
+            background: var(--primary);
+            color: white;
+        }
+        .progress-bar {
+            height: 8px;
+            background: var(--gray);
+            border-radius: 9999px;
+            overflow: hidden;
+        }
+        .progress-bar div {
+            background: var(--primary);
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .flip-card {
+            perspective: 1000px;
+        }
+        .flip-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .flip-card.flipped .flip-card-inner {
+            transform: rotateY(180deg);
+        }
+        .flip-card-front, .flip-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 16px;
+        }
+        .flip-card-back {
+            transform: rotateY(180deg);
+        }
+        img {
+            border-radius: 16px;
+            object-fit: cover;
+        }
+        .emoji-icon {
+            font-size: 1.5rem;
+            margin-right: 0.5rem;
+        }
+        .arabic .emoji-icon {
+            margin-right: 0;
+            margin-left: 0.5rem;
+        }
+        .list-inside-rtl {
+            list-style-position: inside;
+            padding-right: 1rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--gray);
+        }
+        .arabic th, .arabic td {
+            text-align: right;
+        }
+        th {
+            background: var(--primary);
+            color: white;
+        }
+        @media (max-width: 768px) {
+            table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="max-w-5xl mx-auto p-4">
+        <nav class="flex justify-between items-center p-4 rounded-full mb-6">
+            <div class="text-2xl font-bold text-[var(--primary)]">Learn Spanish with Youssef</div>
+            <div class="flex space-x-2">
+                <a href="#" data-page="home" class="nav-link active" aria-label="Home">Home</a>
+                <a href="#" data-page="introduction" class="nav-link" aria-label="Introduction">Introduction</a>
+                <a href="#" data-page="courses" class="nav-link" aria-label="Courses">Courses</a>
+                <a href="#" data-page="exercises" class="nav-link" aria-label="Exercises">Exercises</a>
+                <a href="#" data-page="games" class="nav-link" aria-label="Games">Games</a>
+                <a href="#" data-page="culture" class="nav-link" aria-label="Culture">Culture</a>
+                <a href="#" data-page="multimedia" class="nav-link" aria-label="Multimedia">Multimedia</a>
+                <a href="#" data-page="stories" class="nav-link" aria-label="Stories">Stories</a>
+                <a href="#" data-page="tools" class="nav-link" aria-label="Tools">Tools</a>
+            </div>
+            <div class="flex space-x-2">
+                <select id="language" class="border rounded-full px-3 py-1" aria-label="Language">
+                    <option value="en">English</option>
+                    <option value="es">Español</option>
+                    <option value="ar" selected>العربية</option>
+                </select>
+                <button id="theme-toggle" class="btn-primary">Dark</button>
+            </div>
+        </nav>
+        <main id="content" class="fade-in"></main>
+        <footer class="text-center py-6 text-[var(--gray)]">
+            <p id="footer-text"></p>
+            <p>Points: <span id="points">0</span></p>
+            <p>Badges: <span id="badges">None</span></p>
+            <div class="mt-4">
+                <a href="#" class="text-[var(--primary)] mx-2" onclick="navigate('about')" aria-label="About Us">${t('about')}</a>
+                <a href="#" class="text-[var(--primary)] mx-2" onclick="navigate('courses')" aria-label="Courses">${t('courses')}</a>
+                <a href="#" class="text-[var(--primary)] mx-2" onclick="navigate('faq')" aria-label="FAQ">${t('faq')}</a>
+                <a href="#" class="text-[var(--primary)] mx-2" onclick="navigate('contact')" aria-label="Contact">${t('contact')}</a>
+            </div>
+            <div class="mt-2">
+                <span id="language-toggle">🇪🇸 / 🇸🇦</span>
+            </div>
+            <div class="mt-2 flex justify-center space-x-4">
+                <a href="#" aria-label="Facebook"><i class="fab fa-facebook text-[var(--primary)]"></i></a>
+                <a href="#" aria-label="Twitter"><i class="fab fa-twitter text-[var(--primary)]"></i></a>
+                <a href="#" aria-label="Instagram"><i class="fab fa-instagram text-[var(--primary)]"></i></a>
+            </div>
+        </footer>
+    </div>
+    <script>
+        // Language Data
+        const translations = {
+            es: {
+                home: "Inicio", introduction: "Introducción", courses: "Cursos", exercises: "Ejercicios",
+                games: "Juegos", culture: "Cultura", multimedia: "Multimedia", stories: "Historias",
+                tools: "Herramientas", welcome: "¡Empieza tu viaje para aprender español hoy!",
+                subtitle: "Un curso completo, interactivo y en tu idioma para aprender el español que se habla en España.",
+                start: "Comenzar ahora", levelA0: "🔰 A0: Principiantes absolutos", levelA1: "📘 A1: Nivel básico",
+                levelA2: "📗 A2: Nivel pre-intermedio", back: "Volver", submit: "Enviar", complete: "Completar",
+                noLessons: "No hay lecciones disponibles.", noExercises: "No hay ejercicios disponibles.",
+                score: "Puntuación", correct: "¡Correcto!", incorrect: "Incorrecto: ", grammar: "Gramática",
+                vocabulary: "Vocabulario", culture: "Cultura", footer: "© 2025 Aprende Español con Youssef",
+                points: "Puntos", badges: "Insignias", beginnerStar: "Estrella de Principiante",
+                lessonHero: "Héroe de Lección", a1Master: "Maestro A1", a2Master: "Maestro A2",
+                pronunciation: "Pronunciación", listen: "Escuchar", flip: "Voltear", wordMatch: "Emparejar Palabras",
+                flashcards: "Tarjetas", reset: "Reiniciar", next: "Siguiente",
+                why_learn: "¿Por qué aprender el español de España?",
+                why_travel: "Comunicarte al viajar por Europa",
+                why_dele: "Aprobar los exámenes oficiales DELE",
+                why_jobs: "Oportunidades laborales y académicas",
+                why_culture: "Conocer la cultura española auténtica",
+                what_learn: "¿Qué vas a aprender en esta plataforma?",
+                what_lessons: "Lecciones desde A0 hasta A2",
+                what_pronunciation: "Pronunciación con audio",
+                what_translations: "Traducciones al árabe y transcripción fonética",
+                what_games: "Juegos y pruebas interactivas",
+                what_videos: "Vídeos y canciones de España",
+                what_cultural: "Notas culturales españolas",
+                choose_level: "Elige tu nivel y empieza a aprender",
+                student_feedback: "Lo que dicen nuestros estudiantes",
+                testimonial1: "He aprendido mucho de forma divertida y fácil. ¡Gracias!",
+                testimonial2: "El apoyo en árabe hace que todo sea más claro. ¡Recomendado!",
+                learning_tools: "Herramientas de aprendizaje destacadas",
+                tool_flashcards: "Tarjetas de vocabulario",
+                tool_listening: "Actividades de escucha",
+                tool_games: "Juegos de vocabulario",
+                tool_quizzes: "Cuestionarios de gramática",
+                final_cta: "¡Empieza a aprender español ahora – gratis!",
+                register: "Registro gratuito",
+                about: "Quiénes somos",
+                faq: "Preguntas frecuentes",
+                contact: "Contacto",
+                intro_welcome: "¡Bienvenidos a Learn Spanish with Youssef!",
+                intro_welcome_text: "Estamos emocionados de que estés aquí para comenzar tu aventura aprendiendo español castellano. Este curso está diseñado para estudiantes árabes, con lecciones claras y apoyo en tu idioma. ¡Prepárate para hablar, aprender y disfrutar!",
+                intro_why: "¿Por qué aprender el español de España?",
+                intro_why_text: "El español es uno de los idiomas más hablados del mundo, con más de 500 millones de hablantes. El español castellano, hablado en España, es la variante estándar y la base de los exámenes oficiales DELE. Aprenderlo te abre puertas para viajar por Europa, estudiar en universidades españolas, trabajar en empresas internacionales y disfrutar de la rica cultura de España, desde el flamenco hasta la literatura de Cervantes.",
+                intro_youssef: "¿Quién es Youssef?",
+                intro_youssef_text: "Youssef es tu guía en este viaje. Es un profesor apasionado por el español y la cultura española, con experiencia enseñando a estudiantes árabes. Le encanta hacer las clases divertidas y fáciles de entender, usando historias, juegos y ejemplos culturales. ¡Con Youssef, aprenderás español de una manera amigable y motivadora!",
+                intro_how: "¿Cómo funciona este sitio web?",
+                intro_how_text: "Nuestros cursos están organizados en tres niveles: A0 (principiante absoluto), A1 (básico) y A2 (pre-intermedio). Cada lección incluye vocabulario nuevo, gramática esencial, audios para practicar pronunciación, notas culturales sobre España y juegos interactivos para reforzar lo aprendido. Te recomendamos estudiar un poco cada día (¡15-20 minutos son suficientes!) y repasar las lecciones anteriores para consolidar tu aprendizaje.",
+                intro_tips: "Consejos para el éxito",
+                intro_tip1: "Practica todos los días, aunque sea solo 10 minutos.",
+                intro_tip2: "Escucha los audios y repite las palabras para mejorar tu pronunciación.",
+                intro_tip3: "No tengas miedo de cometer errores, ¡son parte del aprendizaje!",
+                intro_tip4: "Usa las notas culturales para conectar con la vida española.",
+                levelA0_desc: "Perfecto para quienes nunca han estudiado español. Aprende las bases: alfabeto, saludos y vocabulario esencial.",
+                levelA1_desc: "Para principiantes que quieren construir frases simples y entender conversaciones básicas.",
+                levelA2_desc: "Ideal para estudiantes que desean mejorar su fluidez y aprender a comunicarse en situaciones cotidianas.",
+                start_lesson: "Comenzar lección",
+                objectives: "Objetivos",
+                listening: "Escucha",
+                dialogue: "Diálogo",
+                practice: "Práctica",
+                lesson1_title: "El alfabeto español",
+                lesson1_topics: "Alfabeto y pronunciación",
+                lesson1_features: "Audio, Transliteración, Cuestionario",
+                lesson2_title: "Saludos y presentaciones",
+                lesson2_topics: "Saludos e introducciones",
+                lesson2_features: "Diálogo, Juego de roles",
+                lesson3_title: "Los números",
+                lesson3_topics: "Números del 1 al 100",
+                lesson3_features: "Tarjetas, Audio",
+                lesson4_title: "La familia",
+                lesson4_topics: "Vocabulario de la familia",
+                lesson4_features: "Cuestionario, Diálogo",
+                lesson5_title: "Colores y objetos",
+                lesson5_topics: "Colores y objetos cotidianos",
+                lesson5_features: "Tarjetas, Juego",
+                lesson6_title: "El tiempo y los días",
+                lesson6_topics: "Días de la semana, clima",
+                lesson6_features: "Audio, Cuestionario",
+                lesson7_title: "En el mercado",
+                lesson7_topics: "Compras y comida",
+                lesson7_features: "Diálogo, Juego de roles",
+                lesson8_title: "Mi rutina diaria",
+                lesson8_topics: "Verbos básicos, rutina",
+                lesson8_features: "Cuestionario, Práctica escrita"
+            },
+            en: {
+                home: "Home", introduction: "Introduction", courses: "Courses", exercises: "Exercises",
+                games: "Games", culture: "Culture", multimedia: "Multimedia", stories: "Stories",
+                tools: "Tools", welcome: "Start your journey to learn Spanish today!",
+                subtitle: "A comprehensive, interactive course with Arabic support to learn the Spanish spoken in Spain.",
+                start: "Start Now", levelA0: "🔰 A0: Absolute Beginners", levelA1: "📘 A1: Beginner",
+                levelA2: "📗 A2: Pre-Intermediate", back: "Back", submit: "Submit", complete: "Complete",
+                noLessons: "No lessons available.", noExercises: "No exercises available.",
+                score: "Score", correct: "Correct!", incorrect: "Incorrect: ", grammar: "Grammar",
+                vocabulary: "Vocabulary", culture: "Culture", footer: "© 2025 Learn Spanish with Youssef",
+                points: "Points", badges: "Badges", beginnerStar: "Beginner Star",
+                lessonHero: "Lesson Hero", a1Master: "A1 Master", a2Master: "A2 Master",
+                pronunciation: "Pronunciation", listen: "Listen", flip: "Flip", wordMatch: "Word Matching",
+                flashcards: "Flashcards", reset: "Reset", next: "Next",
+                why_learn: "Why learn Spanish from Spain?",
+                why_travel: "Communicate while traveling in Europe",
+                why_dele: "Pass the official DELE exams",
+                why_jobs: "Career and academic opportunities",
+                why_culture: "Understand authentic Spanish culture",
+                what_learn: "What will you learn on this platform?",
+                what_lessons: "Lessons from A0 to A2",
+                what_pronunciation: "Pronunciation with audio",
+                what_translations: "Arabic translations and phonetic transcription",
+                what_games: "Interactive games and quizzes",
+                what_videos: "Videos and songs from Spain",
+                what_cultural: "Spanish cultural notes",
+                choose_level: "Choose your level and start learning",
+                student_feedback: "What our students say",
+                testimonial1: "I’ve learned so much in a fun and easy way. Thanks!",
+                testimonial2: "The Arabic support makes everything clearer. Highly recommended!",
+                learning_tools: "Featured learning tools",
+                tool_flashcards: "Vocabulary flashcards",
+                tool_listening: "Listening activities",
+                tool_games: "Vocabulary games",
+                tool_quizzes: "Grammar quizzes",
+                final_cta: "Start learning Spanish now – for free!",
+                register: "Free registration",
+                about: "About Us",
+                faq: "FAQ",
+                contact: "Contact",
+                intro_welcome: "Welcome to Learn Spanish with Youssef!",
+                intro_welcome_text: "We’re thrilled you’re here to start your journey learning Castilian Spanish. This course is designed for Arabic-speaking students, with clear lessons and support in your language. Get ready to speak, learn, and enjoy!",
+                intro_why: "Why learn Spanish from Spain?",
+                intro_why_text: "Spanish is one of the most spoken languages worldwide, with over 500 million speakers. Castilian Spanish, spoken in Spain, is the standard variant and the basis for official DELE exams. Learning it opens doors to travel in Europe, study at Spanish universities, work with international companies, and enjoy Spain’s rich culture, from flamenco to Cervantes’ literature.",
+                intro_youssef: "Who is Youssef?",
+                intro_youssef_text: "Youssef is your guide on this journey. He’s a passionate teacher of Spanish and Spanish culture, with experience teaching Arabic-speaking students. He loves making lessons fun and easy to understand, using stories, games, and cultural examples. With Youssef, you’ll learn Spanish in a friendly and motivating way!",
+                intro_how: "How does this website work?",
+                intro_how_text: "Our courses are organized into three levels: A0 (absolute beginner), A1 (basic), and A2 (pre-intermediate). Each lesson includes new vocabulary, essential grammar, audio for pronunciation practice, cultural notes about Spain, and interactive games to reinforce learning. We recommend studying a little each day (15-20 minutes is enough!) and reviewing previous lessons to solidify your progress.",
+                intro_tips: "Tips for success",
+                intro_tip1: "Practice every day, even if it’s just 10 minutes.",
+                intro_tip2: "Listen to the audio and repeat words to improve your pronunciation.",
+                intro_tip3: "Don’t be afraid to make mistakes—they’re part of learning!",
+                intro_tip4: "Use the cultural notes to connect with Spanish life.",
+                levelA0_desc: "Perfect for those who have never studied Spanish. Learn the basics: alphabet, greetings, and essential vocabulary.",
+                levelA1_desc: "For beginners who want to build simple sentences and understand basic conversations.",
+                levelA2_desc: "Ideal for students who want to improve fluency and communicate in everyday situations.",
+                start_lesson: "Start lesson",
+                objectives: "Objectives",
+                listening: "Listening",
+                dialogue: "Dialogue",
+                practice: "Practice",
+                lesson1_title: "The Spanish alphabet",
+                lesson1_topics: "Alphabet and pronunciation",
+                lesson1_features: "Audio, Transliteration, Quiz",
+                lesson2_title: "Greetings and introductions",
+                lesson2_topics: "Greetings and introductions",
+                lesson2_features: "Dialogue, Roleplay",
+                lesson3_title: "Numbers",
+                lesson3_topics: "Numbers 1 to 100",
+                lesson3_features: "Flashcards, Audio",
+                lesson4_title: "The family",
+                lesson4_topics: "Family vocabulary",
+                lesson4_features: "Quiz, Dialogue",
+                lesson5_title: "Colors and objects",
+                lesson5_topics: "Colors and everyday objects",
+                lesson5_features: "Flashcards, Game",
+                lesson6_title: "Time and days",
+                lesson6_topics: "Days of the week, weather",
+                lesson6_features: "Audio, Quiz",
+                lesson7_title: "At the market",
+                lesson7_topics: "Shopping and food",
+                lesson7_features: "Dialogue, Roleplay",
+                lesson8_title: "My daily routine",
+                lesson8_topics: "Basic verbs, routine",
+                lesson8_features: "Quiz, Written practice"
+            },
+            ar: {
+                home: "الرئيسية", introduction: "المقدمة", courses: "الدورات", exercises: "التمارين",
+                games: "الألعاب", culture: "الثقافة", multimedia: "الوسائط المتعددة", stories: "القصص",
+                tools: "الأدوات", welcome: "ابدأ رحلتك لتعلّم اللغة الإسبانية اليوم!",
+                subtitle: "منهج شامل، دروس تفاعلية، ودعم باللغة العربية لتعلم الإسبانية المستخدمة في إسبانيا.",
+                start: "ابدأ الآن", levelA0: "🔰 A0: المبتدئون جدًا", levelA1: "📘 A1: المبتدئون",
+                levelA2: "📗 A2: المستوى قبل المتوسط", back: "رجوع", submit: "إرسال", complete: "إكمال",
+                noLessons: "لا توجد دروس متاحة.", noExercises: "لا توجد تمارين متاحة.",
+                score: "النقاط", correct: "صحيح!", incorrect: "غير صحيح: ", grammar: "القواعد",
+                vocabulary: "المفردات", culture: "الثقافة", footer: "© 2025 تعلم الإسبانية مع يوسف",
+                points: "النقاط", badges: "الشارات", beginnerStar: "نجمة المبتدئ",
+                lessonHero: "بطل الدرس", a1Master: "سيد A1", a2Master: "سيد A2",
+                pronunciation: "النطق", listen: "استمع", flip: "قلب", wordMatch: "مطابقة الكلمات",
+                flashcards: "بطاقات", reset: "إعادة", next: "التالي",
+                why_learn: "لماذا تتعلّم الإسبانية الإسبانية؟",
+                why_travel: "التواصل عند السفر إلى أوروبا",
+                why_dele: "النجاح في اختبارات DELE",
+                why_jobs: "فرص العمل والدراسة",
+                why_culture: "فهم الثقافة الإسبانية الحقيقية",
+                what_learn: "ماذا ستتعلّم في هذا الموقع؟",
+                what_lessons: "دروس مرتبة من A0 إلى A2",
+                what_pronunciation: "نُطق مع ملفات صوتية",
+                what_translations: "ترجمات عربية وكتابة صوتية",
+                what_games: "ألعاب واختبارات تفاعلية",
+                what_videos: "مقاطع فيديو وأغانٍ من إسبانيا",
+                what_cultural: "ملاحظات ثقافية إسبانية",
+                choose_level: "اختر مستواك وابدأ التعلم",
+                student_feedback: "آراء طلابنا",
+                testimonial1: "لقد تعلمت الكثير بطريقة ممتعة وسهلة. شكراً!",
+                testimonial2: "الدعم بالعربية يجعل كل شيء أوضح. أنصح به بشدة!",
+                learning_tools: "أدوات التعلم المميزة",
+                tool_flashcards: "بطاقات المفردات",
+                tool_listening: "أنشطة الاستماع",
+                tool_games: "ألعاب المفردات",
+                tool_quizzes: "اختبارات القواعد",
+                final_cta: "ابدأ تعلّم الإسبانية الآن – مجانًا!",
+                register: "تسجيل مجاني",
+                about: "من نحن",
+                faq: "الأسئلة الشائعة",
+                contact: "اتصل بنا",
+                intro_welcome: "مرحبًا بكم في تعلم الإسبانية مع يوسف!",
+                intro_welcome_text: "نحن متحمسون لأنك هنا لبدء مغامرتك في تعلم الإسبانية القشتالية. تم تصميم هذا المنهج للطلاب الناطقين بالعربية، مع دروس واضحة ودعم بلغتك. استعد للتحدث والتعلم والاستمتاع!",
+                intro_why: "لماذا تتعلم الإسبانية الإسبانية؟",
+                intro_why_text: "الإسبانية واحدة من أكثر اللغات انتشارًا في العالم، مع أكثر من 500 مليون ناطق. الإسبانية القشتالية، المنطوقة في إسبانيا، هي المتغير القياسي وأساس اختبارات DELE الرسمية. تعلمها يفتح أبواب السفر في أوروبا، والدراسة في الجامعات الإسبانية، والعمل في شركات عالمية، والاستمتاع بالثقافة الإسبانية الغنية، من الفلامنكو إلى أدب ثيربانتس.",
+                intro_youssef: "من هو يوسف؟",
+                intro_youssef_text: "يوسف هو مرشدك في هذه الرحلة. إنه معلم متحمس لتعليم الإسبانية والثقافة الإسبانية، ولديه خبرة في تدريس الطلاب الناطقين بالعربية. يحب جعل الدروس ممتعة وسهلة الفهم باستخدام القصص والألعاب والأمثلة الثقافية. مع يوسف، ستتعلم الإسبانية بطريقة ودية ومحفزة!",
+                intro_how: "كيف يعمل هذا الموقع؟",
+                intro_how_text: "مناهجنا مقسمة إلى ثلاثة مستويات: A0 (مبتدئ مطلق)، A1 (أساسي)، وA2 (قبل المتوسط). تشمل كل درس مفردات جديدة، قواعد أساسية، ملفات صوتية لممارسة النطق، ملاحظات ثقافية عن إسبانيا، وألعاب تفاعلية لتعزيز التعلم. نوصي بالدراسة قليلاً كل يوم (15-20 دقيقة كافية!) ومراجعة الدروس السابقة لتثبيت تقدمك.",
+                intro_tips: "نصائح للنجاح",
+                intro_tip1: "تدرب يوميًا، حتى لو لمدة 10 دقائق فقط.",
+                intro_tip2: "استمع إلى الملفات الصوتية وكرر الكلمات لتحسين نطقك.",
+                intro_tip3: "لا تخف من ارتكاب الأخطاء، فهي جزء من التعلم!",
+                intro_tip4: "استخدم الملاحظات الثقافية للتواصل مع الحياة الإسبانية.",
+                levelA0_desc: "مثالي لمن لم يدرس الإسبانية من قبل. تعلم الأساسيات: الأبجدية، التحيات، والمفردات الأساسية.",
+                levelA1_desc: "للمبتدئين الذين يرغبون في بناء جمل بسيطة وفهم المحادثات الأساسية.",
+                levelA2_desc: "مثالي للطلاب الذين يريدون تحسين طلاقتهم والتواصل في المواقف اليومية.",
+                start_lesson: "ابدأ الدرس",
+                objectives: "الأهداف",
+                listening: "الاستماع",
+                dialogue: "الحوار",
+                practice: "التدريب",
+                lesson1_title: "الأبجدية الإسبانية",
+                lesson1_topics: "الأبجدية والنطق",
+                lesson1_features: "صوت، كتابة صوتية، اختبار",
+                lesson2_title: "التحيات والتعريف",
+                lesson2_topics: "التحيات والتعريف",
+                lesson2_features: "حوار، لعب الأدوار",
+                lesson3_title: "الأرقام",
+                lesson3_topics: "الأرقام من 1 إلى 100",
+                lesson3_features: "بطاقات، صوت",
+                lesson4_title: "العائلة",
+                lesson4_topics: "مفردات العائلة",
+                lesson4_features: "اختبار، حوار",
+                lesson5_title: "الألوان والأشياء",
+                lesson5_topics: "الألوان والأشياء اليومية",
+                lesson5_features: "بطاقات، لعبة",
+                lesson6_title: "الوقت والأيام",
+                lesson6_topics: "أيام الأسبوع، الطقس",
+                lesson6_features: "صوت، اختبار",
+                lesson7_title: "في السوق",
+                lesson7_topics: "التسوق والطعام",
+                lesson7_features: "حوار، لعب الأدوار",
+                lesson8_title: "روتيني اليومي",
+                lesson8_topics: "الأفعال الأساسية، الروتين",
+                lesson8_features: "اختبار، تدريب كتابي"
+            }
+        };
+
+        // Course Data
+        const courses = {
+            A0: [
+                {
+                    id: 1,
+                    title: { es: "El alfabeto español", en: "The Spanish alphabet", ar: "الأبجدية الإسبانية" },
+                    topics: { es: "Alfabeto y pronunciación", en: "Alphabet and pronunciation", ar: "الأبجدية والنطق" },
+                    features: { es: "Audio, Transliteración, Cuestionario", en: "Audio, Transliteration, Quiz", ar: "صوت، كتابة صوتية، اختبار" },
+                    objectives: { es: "Aprender las letras del alfabeto español y su pronunciación.", en: "Learn the letters of the Spanish alphabet and their pronunciation.", ar: "تعلم حروف الأبجدية الإسبانية ونطقها." },
+                    vocabulary: [
+                        { word: "a", pronunciation: "/a/", arabic: "آ", translation: { es: "a", en: "a", ar: "أ" }, audio: "[audio_a.mp3]" },
+                        { word: "be", pronunciation: "/be/", arabic: "بي", translation: { es: "b", en: "b", ar: "ب" }, audio: "[audio_b.mp3]" },
+                        { word: "ce", pronunciation: "/θe/", arabic: "ثي", translation: { es: "c", en: "c", ar: "ث" }, audio: "[audio_c.mp3]" }
+                    ],
+                    grammar: { es: "El alfabeto español tiene 27 letras. La 'c' antes de 'e' o 'i' se pronuncia /θ/ (ceceo).", en: "The Spanish alphabet has 27 letters. 'C' before 'e' or 'i' is pronounced /θ/ (ceceo).", ar: "الأبجدية الإسبانية تحتوي على 27 حرفًا. الحرف 'c' قبل 'e' أو 'i' يُنطق /θ/ (ثيثيو)." },
+                    listening: {
+                        text: { es: "Escucha y repite: A, Be, Ce, De...", en: "Listen and repeat: A, Be, Ce, De...", ar: "استمع وكرر: أ، بي، ثي، دي..." },
+                        audio: "[audio_alphabet.mp3]"
+                    },
+                    exercise: {
+                        id: "1a",
+                        type: "multiple-choice",
+                        question: { es: "¿Cómo se pronuncia 'c' antes de 'e'?", en: "How is 'c' pronounced before 'e'?", ar: "كيف يُنطق الحرف 'c' قبل 'e'؟" },
+                        options: ["/θ/", "/k/", "/s/"],
+                        correct: "/θ/"
+                    },
+                    practice: { es: "Escribe 5 letras y practica su pronunciación en voz alta.", en: "Write 5 letters and practice their pronunciation aloud.", ar: "اكتب 5 حروف وتدرب على نطقها بصوت عالٍ." },
+                    image: "https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=200&q=80",
+                    icon: "fas fa-book",
+                    source: "FluentU Spanish Blog"
+                },
+                {
+                    id: 2,
+                    title: { es: "Saludos y presentaciones", en: "Greetings and introductions", ar: "التحيات والتعريف" },
+                    topics: { es: "Saludos e introducciones", en: "Greetings and introductions", ar: "التحيات والتعريف" },
+                    features: { es: "Diálogo, Juego de roles", en: "Dialogue, Roleplay", ar: "حوار، لعب الأدوار" },
+                    objectives: { es: "Aprender a saludar y presentarse en español.", en: "Learn to greet and introduce yourself in Spanish.", ar: "تعلم كيفية التحية والتعريف بالنفس بالإسبانية." },
+                    vocabulary: [
+                        { word: "hola", pronunciation: "/ˈo.la/", arabic: "هولا", translation: { es: "hola", en: "hello", ar: "مرحبًا" }, audio: "[audio_hola.mp3]" },
+                        { word: "adiós", pronunciation: "/a.ˈðios/", arabic: "أديوس", translation: { es: "adiós", en: "goodbye", ar: "وداعًا" }, audio: "[audio_adios.mp3]" },
+                        { word: "me llamo", pronunciation: "/me ˈʎa.mo/", arabic: "مي يامو", translation: { es: "my name is", en: "my name is", ar: "اسمي" }, audio: "[audio_mellamo.mp3]" }
+                    ],
+                    grammar: { es: "Uso de 'hola' para saludar y 'me llamo' para presentarse.", en: "Use of 'hola' to greet and 'me llamo' to introduce oneself.", ar: "استخدام 'hola' للتحية و'me llamo' للتعريف بالنفس." },
+                    dialogue: {
+                        text: { 
+                            es: "Ana: ¡Hola! Me llamo Ana. ¿Y tú?\nPedro: Hola, me llamo Pedro. ¡Encantado!",
+                            en: "Ana: Hello! My name is Ana. And you?\nPedro: Hello, my name is Pedro. Nice to meet you!",
+                            ar: "آنا: مرحبًا! اسمي آنا. وأنت؟\nبيدرو: مرحبًا، اسمي بيدرو. تشرفت!"
+                        },
+                        audio: "[audio_greeting.mp3]"
+                    },
+                    exercise: {
+                        id: "2a",
+                        type: "fill-in-blank",
+                        question: { es: "¡___! Me llamo Juan.", en: "___! My name is Juan.", ar: "___! اسمي خوان." },
+                        options: ["Hola", "Adiós"],
+                        correct: "Hola"
+                    },
+                    practice: { es: "Graba un audio presentándote: 'Hola, me llamo [tu nombre].'", en: "Record an audio introducing yourself: 'Hello, my name is [your name].'", ar: "سجل صوتًا لتعريف نفسك: 'مرحبًا، اسمي [اسمك].'" },
+                    image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80",
+                    icon: "fas fa-handshake",
+                    source: "VideoEle A0 Course"
+                },
+                {
+                    id: 3,
+                    title: { es: "Los números", en: "Numbers", ar: "الأرقام" },
+                    topics: { es: "Números del 1 al 100", en: "Numbers 1 to 100", ar: "الأرقام من 1 إلى 100" },
+                    features: { es: "Tarjetas, Audio", en: "Flashcards, Audio", ar: "بطاقات، صوت" },
+                    objectives: { es: "Aprender a contar del 1 al 100 en español.", en: "Learn to count from 1 to 100 in Spanish.", ar: "تعلم العد من 1 إلى 100 بالإسبانية." },
+                    vocabulary: [
+                        { word: "uno", pronunciation: "/ˈu.no/", arabic: "أونو", translation: { es: "uno", en: "one", ar: "واحد" }, audio: "[audio_uno.mp3]" },
+                        { word: "diez", pronunciation: "/ˈdjeθ/", arabic: "دييث", translation: { es: "diez", en: "ten", ar: "عشرة" }, audio: "[audio_diez.mp3]" },
+                        { word: "veinte", pronunciation: "/ˈbein.te/", arabic: "بيينتي", translation: { es: "veinte", en: "twenty", ar: "عشرون" }, audio: "[audio_veinte.mp3]" }
+                    ],
+                    grammar: { es: "Los números del 1 al 100 son regulares, con excepciones como 'dieciséis' (16).", en: "Numbers 1 to 100 are regular, with exceptions like 'dieciséis' (16).", ar: "الأرقام من 1 إلى 100 منتظمة، مع استثناءات مثل 'دييثيسيس' (16)." },
+                    listening: {
+                        text: { es: "Escucha y repite: Uno, dos, tres, cuatro...", en: "Listen and repeat: One, two, three, four...", ar: "استمع وكرر: واحد، اثنان، ثلاثة، أربعة..." },
+                        audio: "[audio_numbers.mp3]"
+                    },
+                    exercise: {
+                        id: "3a",
+                        type: "multiple-choice",
+                        question: { es: "¿Cómo se escribe '10'?", en: "How do you write '10'?", ar: "كيف تُكتب '10'؟" },
+                        options: ["diez", "once", "doce"],
+                        correct: "diez"
+                    },
+                    practice: { es: "Escribe los números del 1 al 10 en español.", en: "Write the numbers from 1 to 10 in Spanish.", ar: "اكتب الأرقام من 1 إلى 10 بالإسبانية." },
+                    image: "https://images.unsplash.com/photo-1518133910546-b6c2fb7d79e3?auto=format&fit=crop&w=200&q=80",
+                    icon: "fas fa-sort-numeric-up",
+                    source: "StudySpanish.com"
+                },
+                {
+                    id: 4,
+                    title: { es: "La familia", en: "The family", ar: "العائلة" },
+                    topics: { es: "Vocabulario de la familia", en: "Family vocabulary", ar: "مفردات العائلة" },
+                    features: { es: "Cuestionario, Diálogo", en: "Quiz, Dialogue", ar: "اختبار، حوار" },
+                    objectives: { es: "Aprender vocabulario relacionado con la familia.", en: "Learn vocabulary related to the family.", ar: "تعلم مفردات متعلقة بالعائلة." },
+                    vocabulary: [
+                        { word: "padre", pronunciation: "/ˈpa.ðɾe/", arabic: "بادري", translation: { es: "padre", en: "father", ar: "أب" }, audio: "[audio_padre.mp3]" },
+                        { word: "madre", pronunciation: "/ˈma.ðɾe/", arabic: "مادري", translation: { es: "madre", en: "mother", ar: "أم" }, audio: "[audio_madre.mp3]" },
+                        { word: "hermano", pronunciation: "/eɾ.ˈma.no/", arabic: "إرمانو", translation: { es: "hermano", en: "brother", ar: "أخ" }, audio: "[audio_hermano.mp3]" }
+                    ],
+                    grammar: { es: "Los sustantivos de familia pueden ser masculinos ('padre') o femeninos ('madre').", en: "Family nouns can be masculine ('padre') or feminine ('madre').", ar: "أسماء العائلة يمكن أن تكون مذكرة ('padre') أو مؤنثة ('madre')." },
+                    dialogue: {
+                        text: { 
+                            es: "Lucía: Este es mi padre, Juan.\nJuan: ¡Hola! Encantado.",
+                            en: "Lucía: This is my father, Juan.\nJuan: Hello! Nice to meet you.",
+                            ar: "لوسيا: هذا والدي، خوان.\nخوان: مرحبًا! تشرفت."
+                        },
+                        audio: "[audio_family.mp3]"
+                    },
+                    exercise: {
+                        id: "4a",
+                        type: "multiple-choice",
+                        question: { es: "¿Qué significa 'madre'?", en: "What does 'madre' mean?", ar: "ماذا تعني 'madre'؟" },
+                        options: ["mother", "father", "sister"],
+                        correct: "mother"
+                    },
+                    practice: { es: "Escribe una frase sobre tu familia: 'Mi madre es...'", en: "Write a sentence about your family: 'My mother is...'", ar: "اكتب جملة عن عائلتك: 'أمي هي...'" },
+                    image: "https://images.unsplash.com/photo-1519419691348-3b343531504a?auto=format&fit=crop&w=200&q=80",
+                    icon: "fas fa-users",
+                    source: "SpanishPod101"
+                },
+                {
+                    id: 5,
+                    title: { es: "Colores y objetos", en: "Colors and objects", ar: "الألوان والأشياء" },
+                    topics: { es: "Colores y objetos cotidianos", en: "Colors and everyday objects", ar: "الألوان والأشياء اليومية" },
+                    features: { es: "Tarjetas, Juego", en: "Flashcards, Game", ar: "بطاقات، لعبة" },
+                    objectives: { es: "Aprender los colores y nombres de objetos comunes.", en: "Learn colors and names of common objects.", ar: "تعلم الألوان وأسماء الأشياء الشائعة." },
+                    vocabulary: [
+                        { word: "rojo", pronunciation: "/ˈro.xo/", arabic: "روخو", translation: { es: "rojo", en: "red", ar: "أحمر" }, audio: "[audio_rojo.mp3]" },
+                        { word: "mesa", pronunciation: "/ˈme.sa/", arabic: "ميسا", translation: { es: "mesa", en: "table", ar: "طاولة" }, audio: "[audio_mesa.mp3]" },
+                        { word: "libro", pronunciation: "/ˈli.βɾo/", arabic: "ليبرو", translation: { es: "libro", en: "book", ar: "كتاب" }, audio: "[audio_libro.mp3]" }
+                    ],
+                    grammar: { es: "Adjetivos de color van después del sustantivo: 'mesa roja'.", en: "Color adjectives follow the noun: 'mesa roja'.", ar: "صفات الألوان تأتي بعد الاسم: 'ميسا روخا'." },
+                    listening: {
+                        text: { es: "Escucha: La mesa es roja. El libro es azul.", en: "Listen: The table is red. The book is blue.", ar: "استمع: الطاولة حمراء. الكتاب أزرق." },
+                        audio: "[audio_colors.mp3]"
+                    },
+                    exercise: {
+                        id: "5a",
+                        type: "matching",
+                        question: { es: "Empareja: rojo, mesa.", en: "Match: red, table.", ar: "قم بالمطابقة: أحمر، طاولة." },
+                        options: [{ es: "rojo", ar: "أحمر" }, { es: "mesa", ar: "طاولة" }],
+                        correct: ["rojo:أحمر", "mesa:طاولة"]
+                    },
+                    practice: { es: "Describe 3 objetos con colores: 'El libro es rojo.'", en: "Describe 3 objects with colors: 'The book is red.'", ar: "صف 3 أشياء بالألوان: 'الكتاب أحمر.'" },
+                    image: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=200&q=80",
+                    icon: "fas fa-paint-brush",
+                    source: "Duolingo Spanish"
+                },
+                {
+                    id: 6,
+                    title: { es: "El tiempo y los días", en: "Time and days", ar: "الوقت والأيام" },
+                    topics: { es: "Días de la semana, clima", en: "Days of the week, weather", ar: "أيام الأسبوع، الطقس" },
+                    features: { es: "Audio, Cuestionario", en: "Audio, Quiz", ar: "صوت، اختبار" },
+                    objectives: { es: "Aprender los días de la semana y vocabulario del clima.", en: "Learn the days of the week and weather vocabulary.", ar: "تعلم أيام الأسبوع ومفردات الطقس." },
+                    vocabulary: [
+                        { word: "lunes", pronunciation: "/ˈlu.nes/", arabic: "لونيس", translation: { es: "lunes", en: "Monday", ar: "الإثنين" }, audio: "[audio_lunes.mp3]" },
+                        { word: "sol", pronunciation: "/sol/", arabic: "سول", translation: { es: "sol", en: "sun", ar: "شمس" }, audio: "[audio_sol.mp3]" },
+                        { word: "lluvia", pronunciation: "/ˈʎu.βja/", arabic: "يوبيا", translation: { es: "lluvia", en: "rain", ar: "مطر" }, audio: "[audio_lluvia.mp3]" }
+                    ],
+                    grammar: { es: "Los días de la semana no se escriben con mayúscula: 'lunes'.", en: "Days of the week are not capitalized: 'lunes'.", ar: "أيام الأسبوع لا تُكتب بحرف كبير: 'لونيس'." },
+                    listening: {
+                        text: { es: "Hoy es lunes. Hace sol.", en: "Today is Monday. It’s sunny.", ar: "اليوم الإثنين. الجو مشمس." },
+                        audio: "[audio_weather.mp3]"
+                    },
+                    exercise: {
+                        id: "6a",
+                        type: "multiple-choice",
+                        question: { es: "¿Qué día viene después de 'lunes'?", en: "What day comes after 'Monday'?", ar: "أي يوم يأتي بعد 'الإثنين'؟" },
+                        options: ["martes", "miércoles", "domingo"],
+                        correct: "martes"
+                    },
+                    practice: { es: "Escribe: 'El viernes hace lluvia.'", en: "Write: 'On Friday, it’s raining.'", ar: "اكتب: 'يوم الجمعة يمطر.'" },
+                    image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=200&q=80",
+                    icon: "fas fa-calendar",
+                    source: "BBC Spanish"
+                },
+                {
+                    id: 7,
+                    title: { es: "En el mercado", en: "At the market", ar: "في السوق" },
+                    topics: { es: "Compras y comida", en: "Shopping and food", ar: "التسوق والطعام" },
+                    features: { es: "Diálogo, Juego de roles", en: "Dialogue, Roleplay", ar: "حوار، لعب الأدوار" },
+                    objectives: { es: "Aprender vocabulario de comida y practicar compras.", en: "Learn food vocabulary and practice shopping.", ar: "تعلم مفردات الطعام وممارسة التسوق." },
+                    vocabulary: [
+                        { word: "pan", pronunciation: "/pan/", arabic: "بان", translation: { es: "pan", en: "bread", ar: "خبز" }, audio: "[audio_pan.mp3]" },
+                        { word: "leche", pronunciation: "/ˈle.tʃe/", arabic: "ليتشي", translation: { es: "leche", en: "milk", ar: "حليب" }, audio: "[audio_leche.mp3]" },
+                        { word: "quiero", pronunciation: "/ˈkje.ɾo/", arabic: "كييرو", translation: { es: "quiero", en: "I want", ar: "أريد" }, audio: "[audio_quiero.mp3]" }
+                    ],
+                    grammar: { es: "Uso de 'quiero' para expresar deseos: 'Quiero pan.'", en: "Use of 'quiero' to express wants: 'I want bread.'", ar: "استخدام 'quiero' للتعبير عن الرغبات: 'أريد خبزًا.'" },
+                    dialogue: {
+                        text: { 
+                            es: "Cliente: Hola, quiero pan y leche.\nVendedor: ¡Claro! Aquí tienes.",
+                            en: "Customer: Hello, I want bread and milk.\nSeller: Sure! Here you go.",
+                            ar: "الزبون: مرحبًا، أريد خبزًا وحليبًا.\nالبائع: بالطبع! تفضل."
+                        },
+                        audio: "[audio_market.mp3]"
+                    },
+                    exercise: {
+                        id: "7a",
+                        type: "fill-in-blank",
+                        question: { es: "Quiero ___ y leche.", en: "I want ___ and milk.", ar: "أريد ___ وحليب." },
+                        options: ["pan", "sol"],
+                        correct: "pan"
+                    },
+                    practice: { es: "Practica un diálogo: 'Quiero pan.'", en: "Practice a dialogue: 'I want bread.'", ar: "مارس حوارًا: 'أريد خبزًا.'" },
+                    image: "https://images.unsplash.com/photo-1513185158878-8d8c2a2a3da7?auto=format&fit=crop&w=200&q=80",
+                    icon: "fas fa-shopping-basket",
+                    source: "Spanish Experiment"
+                },
+                {
+                    id: 8,
+                    title: { es: "Mi rutina diaria", en: "My daily routine", ar: "روتيني اليومي" },
+                    topics: { es: "Verbos básicos, rutina", en: "Basic verbs, routine", ar: "الأفعال الأساسية، الروتين" },
+                    features: { es: "Cuestionario, Práctica escrita", en: "Quiz, Written practice", ar: "اختبار، تدريب كتابي" },
+                    objectives: { es: "Aprender verbos básicos y describir rutinas.", en: "Learn basic verbs and describe routines.", ar: "تعلم الأفعال الأساسية ووصف الروتين." },
+                    vocabulary: [
+                        { word: "levanto", pronunciation: "/le.ˈβan.to/", arabic: "ليبانتو", translation: { es: "levanto", en: "I get up", ar: "أستيقظ" }, audio: "[audio_levanto.mp3]" },
+                        { word: "como", pronunciation: "/ˈko.mo/", arabic: "كومو", translation: { es: "como", en: "I eat", ar: "آكل" }, audio: "[audio_como.mp3]" },
+                        { word: "duermo", pronunciation: "/ˈdweɾ.mo/", arabic: "دويرمو", translation: { es: "duermo", en: "I sleep", ar: "أنام" }, audio: "[audio_duermo.mp3]" }
+                    ],
+                    grammar: { es: "Verbos en presente: 'Me levanto a las siete.'", en: "Present tense verbs: 'I get up at seven.'", ar: "الأفعال في المضارع: 'أستيقظ في السابعة.'" },
+                    listening: {
+                        text: { es: "Me levanto a las siete. Como a las ocho.", en: "I get up at seven. I eat at eight.", ar: "أستيقظ في السابعة. آكل في الثامنة." },
+                        audio: "[audio_routine.mp3]"
+                    },
+                    exercise: {
+                        id: "8a",
+                        type: "multiple-choice",
+                        question: { es: "¿Qué significa 'como'?", en: "What does 'como' mean?", ar: "ماذا تعني 'como'؟" },
+                        options: ["I eat", "I sleep", "I get up"],
+                        correct: "I eat"
+                    },
+                    practice: { es: "Escribe 3 frases sobre tu rutina: 'Me levanto a las...'", en: "Write 3 sentences about your routine: 'I get up at...'", ar: "اكتب 3 جمل عن روتينك: 'أستيقظ في...'" },
+                    image: "https://images.unsplash.com/photo-1505330622279-bf7d7fc918f4?auto=format&fit=crop&w=200&q=80",
+                    icon: "fas fa-clock",
+                    source: "LingQ Spanish"
+                }
+            ],
+            A1: [{
+                id: 9,
+                title: { es: "Sustantivos y género", en: "Nouns and gender", ar: "الأسماء والجنس" },
+                topics: { es: "Sustantivos masculinos y femeninos", en: "Masculine and feminine nouns", ar: "الأسماء المذكرة والمؤنثة" },
+                features: { es: "Cuestionario, Tarjetas", en: "Quiz, Flashcards", ar: "اختبار، بطاقات" },
+                objectives: { es: "Entender el género de los sustantivos.", en: "Understand noun gender.", ar: "فهم جنس الأسماء." },
+                vocabulary: [
+                    { word: "gato", pronunciation: "/ˈɡa.to/", arabic: "غاتو", translation: { es: "gato", en: "cat", ar: "قط" }, audio: "[audio_gato.mp3]" }
+                ],
+                grammar: { es: "Sustantivos: masculino (-o), femenino (-a).", en: "Nouns: masculine (-o), feminine (-a).", ar: "الأسماء: مذكر (-o)، مؤنث (-a)." },
+                listening: {
+                    text: { es: "El gato es negro.", en: "The cat is black.", ar: "القط أسود." },
+                    audio: "[audio_gato.mp3]"
+                },
+                exercise: {
+                    id: "9a",
+                    type: "multiple-choice",
+                    question: { es: "¿Es 'gato' masculino o femenino?", en: "Is 'gato' masculine or feminine?", ar: "هل 'gato' مذكر أم مؤنث؟" },
+                    options: ["Masculino", "Femenino"],
+                    correct: "Masculino"
+                },
+                practice: { es: "Escribe 3 sustantivos masculinos.", en: "Write 3 masculine nouns.", ar: "اكتب 3 أسماء مذكرة." },
+                image: "https://images.unsplash.com/photo-1518791841217-8f162f1e1131?auto=format&fit=crop&w=200&q=80",
+                icon: "fas fa-paw",
+                source: "VideoEle A1"
+            }],
+            A2: [{
+                id: 10,
+                title: { es: "En la ciudad", en: "In the city", ar: "في المدينة" },
+                topics: { es: "Lugares y direcciones", en: "Places and directions", ar: "الأماكن والاتجاهات" },
+                features: { es: "Diálogo, Juego", en: "Dialogue, Game", ar: "حوار، لعبة" },
+                objectives: { es: "Aprender vocabulario de la ciudad.", en: "Learn city vocabulary.", ar: "تعلم مفردات المدينة." },
+                vocabulary: [
+                    { word: "calle", pronunciation: "/ˈka.ʎe/", arabic: "كايي", translation: { es: "calle", en: "street", ar: "شارع" }, audio: "[audio_calle.mp3]" }
+                ],
+                grammar: { es: "Preposiciones: 'en', 'a'.", en: "Prepositions: 'en', 'a'.", ar: "حروف الجر: 'en'، 'a'." },
+                dialogue: {
+                    text: { es: "¡La calle está cerca!", en: "The street is nearby!", ar: "الشارع قريب!" },
+                    audio: "[audio_calle.mp3]"
+                },
+                exercise: {
+                    id: "10a",
+                    type: "fill-in-blank",
+                    question: { es: "Vivo ___ la calle.", en: "I live ___ the street.", ar: "أعيش ___ الشارع." },
+                    options: ["en", "a"],
+                    correct: "en"
+                },
+                practice: { es: "Describe tu ciudad.", en: "Describe your city.", ar: "صف مدينتك." },
+                image: "https://images.unsplash.com/photo-1514565131989-8f3ae17b3a2e?auto=format&fit=crop&w=200&q=80",
+                icon: "fas fa-city",
+                source: "Spanish Experiment"
+            }]
+        };
+
+        // General Exercises
+        const generalExercises = [
+            { id: "g1", level: "A0", type: "multiple-choice", question: { es: "¿Qué es 'hola'?", en: "What is 'hola'?", ar: "ما هو 'hola'؟" }, options: ["hello", "goodbye", "thank you"], correct: "hello", source: "StudySpanish.com" },
+            { id: "g2", level: "A1", type: "fill-in-blank", question: { es: "El ___ es rojo.", en: "The ___ is red.", ar: "ال___ أحمر." }, options: ["libro", "mesa"], correct: "libro", source: "VideoEle" }
+        ];
+
+        // Game Data
+        const games = {
+            wordMatching: {
+                id: "game1",
+                title: { es: "Emparejar Palabras", en: "Word Matching", ar: "مطابقة الكلمات" },
+                words: [
+                    { es: "hola", en: "hello", ar: "مرحبًا" },
+                    { es: "libro", en: "book", ar: "كتاب" }
+                ]
+            },
+            flashcards: {
+                id: "game2",
+                title: { es: "Tarjetas", en: "Flashcards", ar: "بطاقات" },
+                cards: [
+                    { front: { es: "hola", en: "hello", ar: "مرحبًا" }, back: { es: "hello", en: "hola", ar: "مرحبًا" } },
+                    { front: { es: "libro", en: "book", ar: "كتاب" }, back: { es: "book", en: "libro", ar: "كتاب" } }
+                ]
+            }
+        };
+
+        // Multimedia Data
+        const multimedia = [
+            {
+                title: { es: "VideoEle: Lección A1", en: "VideoEle: A1 Lesson", ar: "فيديو إلي: درس A1" },
+                url: "https://www.youtube.com/watch?v=example",
+                description: { es: "Lección en español castellano.", en: "Castilian Spanish lesson.", ar: "درس بالإسبانية القشتالية." },
+                source: "VideoEle"
+            }
+        ];
+
+        // Tools Data
+        const tools = [
+            {
+                title: { es: "Diccionario Español–Árabe", en: "Spanish–Arabic Dictionary", ar: "قاموس إسباني–عربي" },
+                description: { es: "Almaany ofrece un diccionario en línea gratuito.", en: "Almaany provides a free online dictionary.", ar: "يقدم المعاني قاموسًا مجانيًا عبر الإنترنت." },
+                url: "https://www.almaany.com/ar/dict/ar-es/",
+                source: "Sololingual"
+            }
+        ];
+
+        // State
+        let state = {
+            language: 'ar',
+            theme: 'light',
+            page: 'home',
+            level: null,
+            lesson: null,
+            game: null,
+            section: null,
+            points: 0,
+            badges: [],
+            progress: { A0: {}, A1: {}, A2: {} }
+        };
+
+        // DOM Elements
+        const content = document.getElementById('content');
+        const languageSelect = document.getElementById('language');
+        const themeToggle = document.getElementById('theme-toggle');
+        const pointsDisplay = document.getElementById('points');
+        const badgesDisplay = document.getElementById('badges');
+        const footerText = document.getElementById('footer-text');
+
+        // Utility Functions
+        const t = (key) => translations[state.language][key] || key;
+
+        const updateUI = () => {
+            console.log('updateUI called', state);
+            try {
+                document.body.className = `${state.theme} ${state.language === 'ar' ? 'arabic' : ''}`;
+                document.documentElement.setAttribute('data-language', state.language);
+                footerText.textContent = t('footer');
+                pointsDisplay.textContent = state.points;
+                badgesDisplay.textContent = state.badges.map(b => t(b)).join(', ') || t('badges');
+                document.getElementById('language-toggle').textContent = state.language === 'ar' ? '🇪🇸 / 🇸🇦' : '🇸🇦 / 🇪🇸';
+                renderPage();
+            } catch (error) {
+                console.error('Error in updateUI:', error);
+                content.innerHTML = `<p class="text-red-500">Error loading page. Please check console.</p>`;
+            }
+        };
+
+        const renderPage = () => {
+            console.log('renderPage called', state.page);
+            content.innerHTML = '';
+            content.classList.remove('fade-in');
+            setTimeout(() => content.classList.add('fade-in'), 10);
+
+            try {
+                if (state.page === 'home') {
+                    content.innerHTML = `
+                        <!-- Hero Banner -->
+                        <section class="text-center py-12 bg-[var(--card-bg)] rounded-2xl mb-12">
+                            <h1 class="text-4xl font-bold text-[var(--primary)] mb-4">${t('welcome')}</h1>
+                            <p class="text-xl text-[var(--gray)] mb-8">${t('subtitle')}</p>
+                            <button class="btn-primary" onclick="navigate('courses')" aria-label="Start">${t('start')}</button>
+                        </section>
+
+                        <!-- Why Learn Spanish -->
+                        <section class="py-12">
+                            <h2 class="text-3xl font-bold text-center mb-8">${t('why_learn')}</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="card p-6 flex items-center">
+                                    <span class="emoji-icon">✈️</span>
+                                    <p>${t('why_travel')}</p>
+                                </div>
+                                <div class="card p-6 flex items-center">
+                                    <span class="emoji-icon">🎓</span>
+                                    <p>${t('why_dele')}</p>
+                                </div>
+                                <div class="card p-6 flex items-center">
+                                    <span class="emoji-icon">💼</span>
+                                    <p>${t('why_jobs')}</p>
+                                </div>
+                                <div class="card p-6 flex items-center">
+                                    <span class="emoji-icon">🎭</span>
+                                    <p>${t('why_culture')}</p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- What You Will Learn -->
+                        <section class="py-12 bg-[var(--card-bg)] rounded-2xl">
+                            <h2 class="text-3xl font-bold text-center mb-8">${t('what_learn')}</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6
